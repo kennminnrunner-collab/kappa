@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>かっぱ寿司 食べ放題ルーレット</title>
+
+<style>
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #222 0%, #0f0f0f 60%);
+  color: #f5f5f5;
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+}
+
+/* タイトル */
+h1 {
+  font-size: clamp(16px, 4vw, 24px); /* タイトル自動縮小 */
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+#result {
+  font-size: clamp(16px, 4vw, 28px); /* 結果文字自動縮小 */
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+/* カード */
+.card {
+  background: linear-gradient(160deg, #1b1b1b, #141414);
+  border-radius: 20px;
+  padding: 18px;
+  margin: 14px auto;
+  max-width: 420px;
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* 入力 */
+input, select {
+  width: 100%;
+  font-size: 16px;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 12px;
+  border: none;
+  background: #0f0f0f;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #333;
+}
+
+input::placeholder {
+  color: #777;
+}
+
+/* ボタン共通 */
+button {
+  width: 100%;
+  font-size: 17px;
+  padding: 14px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.08s;
+}
+
+button:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* 各ボタン */
+#spinBtn {
+  background: linear-gradient(135deg, #ff5252, #e53935);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(229,57,53,0.4);
+}
+
+#freeBtn {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(76,175,80,0.35);
+}
+
+#undoBtn {
+  background: #2a2a2a;
+  color: #ccc;
+  box-shadow: inset 0 0 0 1px #444;
+}
+
+/* ステータス */
+#status {
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: #ffcc80;
+  letter-spacing: 0.04em;
+}
+
+/* 結果表示 */
+#result {
+  font-size: 28px;
+  font-weight: 800;
+  padding: 22px;
+  margin-top: 12px;
+  background: radial-gradient(circle at top, #111, #000);
+  border-radius: 20px;
+  border: 2px solid rgba(255,82,82,0.6);
+  box-shadow:
+    0 0 25px rgba(255,82,82,0.35),
+    inset 0 0 12px rgba(255,255,255,0.04);
+}
+
+/* 履歴 */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  font-size: 14px;
+  padding: 8px 6px;
+  border-bottom: 1px solid #222;
+  opacity: 0.9;
+}
+
+/* ▼ プレイヤーカード */
+.player-area {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+
+.player-card {
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: #1b1b1b;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  font-size: 14px;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.player-card.active {
+  opacity: 1;
+  background: linear-gradient(135deg, #ff5252, #ff1744);
+  box-shadow: 0 8px 24px rgba(255,82,82,0.6);
+  transform: scale(1.08);
+}
+
+.player-input {
+  transition: all 0.3s ease;
+}
+
+.player-input.done {
+  opacity: 0.4;
+  transform: scale(0.9);
+  height: 28px;
+  font-size: 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+.name-editor {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.name-editor.hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🍣 かっぱ寿司 食べ放題ルーレット 🍣</h1>
+
+<!-- ▼ 現在プレイヤー表示カード -->
+<div class="player-area">
+  <div class="player-card active" id="pc0" data-player="0">プレイヤー1</div>
+  <div class="player-card" id="pc1" data-player="1">プレイヤー2</div>
+  <div class="player-card" id="pc2" data-player="2">プレイヤー3</div>
+  <div class="player-card" id="pc3" data-player="3">プレイヤー4</div>
+</div>
+
+<div class="card name-editor" id="nameEditor">
+  <h3>プレイヤー名（編集）</h3>
+  <input id="p0" class="player-input" placeholder="プレイヤー1">
+  <input id="p1" class="player-input" placeholder="プレイヤー2">
+  <input id="p2" class="player-input" placeholder="プレイヤー3">
+  <input id="p3" class="player-input" placeholder="プレイヤー4">
+</div>
+
+
+<div class="card">
+  <div id="status">現在：- ／ 1巡目</div>
+  <button id="spinBtn">🎰 ルーレットを回す</button>
+
+  <select id="freeMenu"></select>
+  <button id="freeBtn">🍽 フリーで選ぶ</button>
+
+  <button id="undoBtn">↩ ひとつ戻る</button>
+  <div id="result">ここに表示</div>
+</div>
+
+<div class="card">
+  <h3>履歴ログ</h3>
+<select id="historyFilter" style="width:95%;padding:8px;border-radius:8px;">
+  <option value="all">全員</option>
+</select>
+  <ul id="history"></ul>
+</div>
+
+<script>
+/* ===== メニュー ===== */
+const menu = [
+  /* にぎり（1段目〜） */
+  "旬ネタ期間限定5貫セット",
+  "本日のおすすめ3貫セット",
+  "まぐろ",
+  "ねぎとろにぎり",
+  "びん長まぐろ",
+  "活〆真鯛（2貫）",
+  "国産炙焼きかつおたたき（2貫）",
+  "サーモン",
+  "サーモンマヨ",
+  "サーモンペッパー炙り",
+  "アボカドサーモン",
+  "いか",
+  "あかいかゲソ（大葉）",
+  "浜焼き風あかいかゲソ",
+  "えび",
+  "えびマヨ",
+  "えびマヨペッパー炙り",
+  "浜焼き風えび",
+  "とろ〆さば",
+  "ミナミコガネマス",
+  "えんがわ",
+  "生たこ",
+  "あさり",
+  "つぶ貝",
+  "赤貝",
+  "とろサーモン",
+  "とろサーモン塩炙り",
+  "オニオンサーモンマヨ",
+  "赤えび",
+  "生えび",
+  "アボカドえび",
+  "オニオンえびマヨ",
+  "中とろ",
+  "煮穴子",
+  "玉子",
+  "ローストビーフ",
+  "ローストビーフオニオンマヨ",
+  "合鴨ロース",
+  "合鴨ロースオニオンマヨ",
+  "牛カルビ炙り",
+  "てりやきハンバーグ",
+  "てりやきハンバーグマヨ",
+  "まいたけ天にぎり",
+  "えび天にぎり",
+  "えび天にぎりマヨ",
+  "さくさくイカ天にぎり",
+  "さくさくイカ天にぎりマヨ",
+
+  /* 軍艦 */
+  "感動コーンかっぱ軍艦",
+  "かにカマサラダかっぱ軍艦",
+  "いくら",
+  "ねぎとろ軍艦",
+  "まぐたく軍艦",
+  "オクラめかぶ軍艦",
+  "オクラいかめかぶ軍艦",
+  "あん肝軍艦 ポン酢ジュレのせ",
+  "サラダ軍艦",
+  "感動コーン軍艦",
+  "なっとう軍艦",
+  "卵黄納豆軍艦",
+  "卵黄とろろ軍艦",
+
+  /* 巻物 */
+  "鉄火巻",
+  "なっとう巻",
+  "かっぱ巻",
+  "えび天巻",
+
+  /* サイド */
+  "茶碗蒸し",
+  "かつお出汁入りあんかけ茶碗蒸し",
+  "玉ねぎと油揚げの味噌汁",
+  "あさりの味噌汁",
+  "あおさの味噌汁",
+  "鯛スープの塩ラーメン（メンマチャーシュー）",
+  "コク旨醤油ラーメン（メンマチャーシュー）",
+  "きつねうどん",
+  "えび天うどん",
+  "甘ガリ",
+  "きゅうり",
+  "醤油とドレッシングマヨ",
+  "フライドポテト シャカシャカ系",
+  "若鶏の唐揚げ",
+  "かぼちゃ天",
+  "甘ガリ天盛り",
+  "玉ねぎ天盛り",
+
+  /* スイーツ */
+  "バニラアイス",
+  "ベイクドチーズケーキ",
+  "チョコレートケーキ",
+  "しっとりクリームケーキ",
+  "プレミアムプリン",
+  "コーヒーゼリー＆バニラ",
+  "かっぱのシューアイス",
+  "京都わらび餅"
+];
+
+let count = 0;
+let rights = {};
+
+/* ===== 状態 ===== */
+let players = [];
+let currentPlayer = 0;
+let turn = 1;
+let spinning = false;
+let historyCount = 1;
+let historyStack = [];
+
+/* ===== 初期化 ===== */
+const freeSelect = document.getElementById("freeMenu");
+menu.forEach(m => {
+  const opt = document.createElement("option");
+  opt.value = m;
+  opt.textContent = m;
+  freeSelect.appendChild(opt);
+});
+
+/* ===== 共通 ===== */
+function updateActivePlayer() {
+  for (let i = 0; i < 4; i++) {
+    const card = document.getElementById("pc"+i);
+    if (!card) continue;
+    card.classList.toggle("active", i === currentPlayer);
+  }
+}
+
+function loadPlayers() {
+  players = [];
+
+  for (let i = 0; i < 4; i++) {
+    const input = document.getElementById("p" + i);
+    const name = input.value || `プレイヤー${i + 1}`;
+    players.push(name);
+
+    // プレイヤーカードに名前を反映
+    const card = document.getElementById("pc" + i);
+    if (card) card.textContent = name;
+
+    // ★ ここがポイント
+    if (input.value.trim() !== "") {
+      input.classList.add("done");
+    } else {
+      input.classList.remove("done");
+    }
+  }
+
+  updateStatus();
+  updateHistoryFilter();
+  updateActivePlayer();
+}
+
+function updateStatus() {
+  document.getElementById("status").textContent =
+    `現在：${players[currentPlayer]} ／ ${turn}巡目`;
+}
+
+function addHistory(menuName) {
+  const ul = document.getElementById("history");
+  const li = document.createElement("li");
+  li.textContent = `${historyCount}. ${players[currentPlayer]}：${menuName}`;
+  ul.prepend(li);
+
+  historyStack.push({ player: currentPlayer, li });
+  historyCount++;
+
+  currentPlayer++;
+  if (currentPlayer >= players.length) {
+    currentPlayer = 0;
+    turn++;
+  }
+  updateStatus();
+　updateActivePlayer(); 
+}
+
+/* ===== ルーレット ===== */
+function spin() {
+  if (spinning) return;
+  loadPlayers();
+  spinning = true;
+
+  let count = 0;
+  let delay = 40;
+  const result = document.getElementById("result");
+
+  function loop() {
+    result.textContent = menu[Math.floor(Math.random() * menu.length)];
+    count++;
+    delay += 15;
+
+    if (count < 16) {
+      setTimeout(loop, delay);
+    } else {
+      spinning = false;
+      addHistory(result.textContent);
+    }
+  }
+  loop();
+}
+
+/* ===== フリー選択 ===== */
+function freeSelectMenu() {
+  if (spinning) return;
+  loadPlayers();
+  const m = freeSelect.value;
+  document.getElementById("result").textContent = m;
+  addHistory(`【フリー】${m}`);
+}
+
+/* ===== 戻る ===== */
+function undo() {
+  if (historyStack.length === 0 || spinning) return;
+
+  const last = historyStack.pop();
+  last.li.remove();
+  historyCount--;
+
+  currentPlayer = last.player;
+  if (currentPlayer === players.length - 1 && turn > 1) {
+    turn--;
+  }
+
+  document.getElementById("result").textContent = "戻しました";
+  updateStatus();
+  filterHistory();
+}
+
+/* ===== 履歴 ===== */
+function updateHistoryFilter() {
+  const select = document.getElementById("historyFilter");
+  const current = select.value;
+
+  select.innerHTML = `<option value="all">全員</option>`;
+  players.forEach((p, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = p;
+    select.appendChild(opt);
+  });
+
+  select.value = current || "all";
+}
+
+function filterHistory() {
+  const value = document.getElementById("historyFilter").value;
+
+  historyStack.forEach(h => {
+    if (value === "all" || Number(value) === h.player) {
+      h.li.style.display = "";
+    } else {
+      h.li.style.display = "none";
+    }
+  });
+}
+
+document.getElementById("historyFilter").addEventListener("change", filterHistory);
+
+/* ===== ボタン ===== */
+document.getElementById("spinBtn").onclick = spin;
+document.getElementById("freeBtn").onclick = freeSelectMenu;
+document.getElementById("undoBtn").onclick = undo;
+
+document.querySelectorAll(".player-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const p = Number(card.dataset.player);
+
+    // 今のプレイヤーを変更
+    currentPlayer = p;
+
+    // 上の「現在：〇〇」を更新
+    updateStatus();
+
+    // 赤く光るカードを更新
+    updateActivePlayer();
+
+    // ★ ここを追加
+    document.getElementById("nameEditor").classList.remove("hidden");
+
+    // ★ 押した人の入力欄にフォーカス
+    document.getElementById("p" + p).focus();
+
+    // 履歴フィルタも同時に切り替え
+    const select = document.getElementById("historyFilter");
+    select.value = p;
+    filterHistory();
+  });
+});
+
+// ▼ プレイヤー名入力：確定したら自動で閉じる
+document.querySelectorAll(".player-input").forEach(input => {
+
+  // Enterキーで確定
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      input.blur();
+    }
+  });
+
+  // フォーカス外れたら保存して閉じる
+  input.addEventListener("blur", () => {
+    loadPlayers();
+    document.getElementById("nameEditor").classList.add("hidden");
+  });
+
+});
+
+</script>
+
+</body>
+</html>
